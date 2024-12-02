@@ -210,15 +210,23 @@ def testAuth():
     addreport(separator('=', 10))
     addreport("Testing authentication")
     try:
-        session = Cluster(connect_timeout = 2, cloud={"secure_connect_bundle": scb}, auth_provider=PlainTextAuthProvider("token", token),).connect()
-        row = session.execute("select release_version from system.local", trace=True)
+        session = Cluster(connect_timeout = 2, cloud={"secure_connect_bundle": scb}, auth_provider=PlainTextAuthProvider("token", token)).connect()
+        result = session.execute("select release_version from system.local", trace=True)
     except Exception as e:
         addreport("Authentication failed. Error:", e)
         return False
-    rez = row.one()
-    if rez:
+
+    if result:
         if args.debug:
-            addreport(f"Request read latency: {round(row.get_query_trace().duration.total_seconds() * 1000, 2)} ms")
+            try:
+                print("row: {}".format(result.one()))
+                trace = result.get_query_trace(max_wait=10)
+                if trace is not None:
+                    print("trace: {}".format(trace))
+                    addreport(f"Request read latency: {round(trace.duration.total_seconds() * 1000, 2)} ms")
+            except:
+                print("Query trace unavailable")
+        
         addreport("Authentication successful")
         return False
     else:
